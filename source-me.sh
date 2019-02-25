@@ -1,8 +1,14 @@
 function p4
 {
-    if [ $(command -v p4-$1) ]; then
-        echo p4-$1
-    else
-        echo p4
+    if [ $# -ge 1 ]; then
+        cmd=p4-$1
+        if [ $(command -v $cmd) ]; then
+            shift
+            $cmd $@
+            exit
+        else
+        fi
     fi
+    echo $P4_REAL $@
+    $P4_REAL $@
 }
