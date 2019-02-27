@@ -1,0 +1,3 @@
+#!/bin/bash
+set -exu
+p4 reconcile -edn

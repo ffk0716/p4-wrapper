@@ -1,3 +1,3 @@
 #!/bin/bash
-set -eu
+set -exu
 p4 help $@
