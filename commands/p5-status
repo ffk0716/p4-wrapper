@@ -1,3 +1,4 @@
 #!/bin/bash
 set -exu
-p4 reconcile -edn
+p4 reconcile -ed
+p4 change -o
