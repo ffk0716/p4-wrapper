@@ -1,0 +1,4 @@
+#!/bin/bash
+set -exu
+CLIENT_ROOT=$(p4 -F %clientRoot% -ztag info)
+vi $CLIENT_ROOT/.p4config
