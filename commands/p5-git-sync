@@ -1,0 +1,4 @@
+#!/bin/bash
+set -exu
+git p4 sync
+git push origin p4/master:master
