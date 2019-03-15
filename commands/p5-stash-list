@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eux
+user=$(p5 user)
+p4 changes -u $user
