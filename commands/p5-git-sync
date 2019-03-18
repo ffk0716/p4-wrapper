@@ -1,4 +1,8 @@
 #!/bin/bash
 set -exu
+p4 sync
+p5 reset
+
 git p4 sync
 git push origin p4/master:master
+git reset --hard p4/master
