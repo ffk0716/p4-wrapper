@@ -1,8 +1,26 @@
 #!/bin/bash
 set -exu
-p4 sync
-p5 reset
 
 git p4 sync
 git push origin p4/master:master
-git reset --hard p4/master
+
+# check rebase
+hash1=$(git show-ref -s p4/master)
+hash2=$(git merge-base p4/master HEAD)
+if [ "${hash1}" = "${hash2}" ] ; then
+    echo "no rebase is needed"
+else
+    echo "Rebase is required"
+    exit 1
+fi
+
+# update
+p4 sync
+
+
+# make change
+p5 reset
+git reset --hard
+git clean -ffdx
+p4 reconcile -eda
+p4 change -o
