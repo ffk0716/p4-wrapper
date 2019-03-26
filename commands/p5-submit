@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import subprocess
+
+
+def s(cmd, **args):
+    print("+ " + cmd)
+    r = subprocess.check_output(cmd, shell=True).decode('ascii').strip()
+    if 'p' in args and args['p']:
+        print(r)
+    return r
+
+print("update git and check rebase")
+s("git fetch -p")
+master = s("git show-ref -s origin/master")
+base = s("git merge-base origin/master HEAD")
+if base == master:
+    print("no rebase is needed")
+else:
+    print("Rebase is required")
+    exit(1)
+
+print("update p4 and cleanup")
+s("p4 sync")
+s("p4 reconcile -eda")
+s("p4 revert -w ./...")
+
+print("make p4 change")
+s("git diff HEAD~1 HEAD > patch.txt")
+s("patch -p1 < patch.txt")
+s("rm -f patch.txt")
+s("p4 reconcile -eda")
+
+
+def update_p4_desc():
+log = s("git log --format=%B -n 1")
+if 'p4id' in log:
+    print("update old change")
+    for l in log.splitlines():
+        if 'p4id' in l:
+            p4id = l.split()[2]
+    print(p4id)
+    s("p4 reopen -c {} ./...".format(p4id))
+else:
+    print("create new change")
+    desc = "<enter description here>"
+    s("p4 change -o > p4_desc.log")
+    with open('p4_desc.log', 'r') as fi:
+        with open('p4.log', 'w') as fo:
+            for line in fi:
+                if desc in line:
+                    for l in log.splitlines():
+                        fo.write("\t{}\n".format(l))
+                else:
+                    fo.write(line)
+    p4id = s("p4 change -i -u < p4.log")
+    print(p4id)
+    p4id = p4id.split()[1]
+    s("git commit --amend -m \"{}\np4id = {}\"".format(log, p4id))
+    s("make review P4_CL={}".format(p4id))
+    
+#s("p4 shelve -c {} -f".format(p4id))
