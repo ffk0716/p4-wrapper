@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 
-import subprocess
+import subprocess, os
+from argparse import ArgumentParser
+parser = ArgumentParser()
+parser.add_argument('commit_id', metavar='id', help='git commit id')
+parser.add_argument('-p', '--p4dir', required=True, help='p4 dir')
+args = parser.parse_args()
 
+git_dir = os.path.abspath(os.path.curdir)
+p4_dir = os.path.abspath(args.p4dir)
 
 def s(cmd, **args):
     print("+ " + cmd)
@@ -10,25 +17,27 @@ def s(cmd, **args):
         print(r)
     return r
 
+
 print("update git and check rebase")
+os.chdir(git_dir)
 s("git fetch -p")
 master = s("git show-ref -s origin/master")
-base = s("git merge-base origin/master HEAD")
+base = s("git merge-base origin/master {}".format(args.commit_id))
 if base == master:
     print("no rebase is needed")
 else:
     print("Rebase is required")
     exit(1)
 
-print("update p4 and cleanup")
+print("make patch")
+s("git diff {}~1 {} > patch.txt".format(args.commit_id, args.commit_id))
+
+print("update/cleanup p4 and apply patch")
+os.chdir(p4_dir)
 s("p4 sync")
 s("p4 reconcile -eda")
 s("p4 revert -w ./...")
-
-print("make p4 change")
-s("git diff HEAD~1 HEAD > patch.txt")
-s("patch -p1 < patch.txt")
-s("rm -f patch.txt")
+s("patch -p1 < {}/patch.txt".format(git_dir))
 s("p4 reconcile -eda")
 
 
@@ -64,8 +73,9 @@ def update_p4_desc(msg, CL=None):
     return None
 
 
-
+os.chdir(git_dir)
 log = s("git log --format=%B -n 1")
+os.chdir(p4_dir)
 if 'p4id' in log:
     print("update old change")
     for l in log.splitlines():
@@ -78,7 +88,9 @@ else:
     print("create new change")
     p4id = update_p4_desc(log)
     print(p4id)
+    os.chdir(git_dir)
     s("git commit --amend -m \"{}\np4id = {}\"".format(log, p4id))
+    os.chdir(p4_dir)
     s("make review P4_CL={}".format(p4id))
 
 s("p4 shelve -c {} -f".format(p4id))
